@@ -1,0 +1,349 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #0a0a0a;
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+}
+
+.app {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 16px 48px;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 0 28px;
+  border-bottom: 1px solid #1f1f1f;
+  margin-bottom: 28px;
+}
+
+header h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #f5a623;
+}
+
+.btn-upload {
+  background: #f5a623;
+  color: #000;
+  border: none;
+  padding: 8px 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn-upload:hover { opacity: 0.85; }
+
+.error-bar {
+  background: #2a0a0a;
+  border: 1px solid #6b1a1a;
+  color: #ff6b6b;
+  padding: 10px 14px;
+  margin-bottom: 20px;
+  font-size: 0.85rem;
+}
+
+.empty {
+  text-align: center;
+  color: #444;
+  padding: 80px 0;
+  font-size: 0.95rem;
+}
+
+/* Meme grid */
+.meme-grid {
+  columns: 4 280px;
+  column-gap: 12px;
+}
+
+.meme-card {
+  break-inside: avoid;
+  margin-bottom: 12px;
+  background: #111;
+  overflow: hidden;
+  border: 1px solid #1a1a1a;
+}
+
+.meme-card img,
+.meme-card video {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.meme-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  font-size: 0.7rem;
+  color: #555;
+  background: #0d0d0d;
+}
+
+.meme-uploader {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.avatar-xs {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.avatar-md {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+
+.modal {
+  background: #111;
+  border: 1px solid #222;
+  padding: 28px;
+  width: 100%;
+  max-width: 480px;
+}
+
+.modal h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #f5a623;
+  margin-bottom: 20px;
+  letter-spacing: 0.05em;
+}
+
+.drop-zone {
+  display: block;
+  border: 2px dashed #2a2a2a;
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  margin-bottom: 16px;
+}
+
+.drop-zone:hover,
+.drop-zone.drag-over { border-color: #f5a623; }
+
+.drop-zone p { color: #555; font-size: 0.85rem; margin-top: 6px; }
+.drop-zone .file-name { color: #ccc; font-size: 0.85rem; margin-top: 8px; }
+
+.drop-zone input[type="file"] { display: none; }
+
+.upload-icon {
+  width: 40px;
+  height: 40px;
+  color: #444;
+  margin-bottom: 8px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.btn-primary {
+  flex: 1;
+  background: #f5a623;
+  color: #000;
+  border: none;
+  padding: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn-primary:hover:not(:disabled) { opacity: 0.85; }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-secondary {
+  background: transparent;
+  color: #555;
+  border: 1px solid #333;
+  padding: 10px 18px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.btn-secondary:hover { color: #ccc; border-color: #555; }
+
+.modal-error {
+  color: #ff6b6b;
+  font-size: 0.8rem;
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: #1a0808;
+  border: 1px solid #3a1010;
+}
+
+.modal-success {
+  color: #6bff9e;
+  font-size: 0.8rem;
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: #081a0e;
+  border: 1px solid #103a1c;
+}
+
+.status-text {
+  color: #888;
+  font-size: 0.8rem;
+  margin-top: 10px;
+}
+
+.nostr-warning {
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 12px;
+  line-height: 1.5;
+}
+
+.nostr-warning a { color: #f5a623; }
+
+/* Meme cards — clickable */
+.meme-card { cursor: pointer; }
+.meme-card:hover { outline: 1px solid #333; }
+
+/* Detail page */
+.detail { max-width: 860px; margin: 0 auto; }
+
+.btn-back {
+  background: none;
+  border: none;
+  color: #555;
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0 0 20px;
+  display: block;
+}
+.btn-back:hover { color: #ccc; }
+
+.detail-media {
+  background: #0d0d0d;
+  border: 1px solid #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-height: 70vh;
+  overflow: hidden;
+}
+
+.detail-media img,
+.detail-media video {
+  display: block;
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+}
+
+.detail-meta {
+  margin-top: 20px;
+  border: 1px solid #1a1a1a;
+  padding: 18px 20px;
+  background: #0d0d0d;
+}
+
+.detail-uploader {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0 16px;
+  border-bottom: 1px solid #161616;
+  margin-bottom: 4px;
+}
+
+.detail-uploader-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #e0e0e0;
+}
+
+.detail-row {
+  display: flex;
+  gap: 16px;
+  padding: 6px 0;
+  border-bottom: 1px solid #161616;
+  font-size: 0.85rem;
+}
+.detail-row:last-of-type { border-bottom: none; }
+
+.detail-label { color: #555; min-width: 90px; flex-shrink: 0; }
+.detail-value { color: #ccc; word-break: break-all; }
+.detail-pubkey { color: #444; font-size: 0.78rem; }
+
+.detail-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #1a1a1a;
+}
+
+.btn-share {
+  background: #f5a623;
+  color: #000;
+  border: none;
+  padding: 8px 18px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  min-width: 100px;
+}
+.btn-share:hover { opacity: 0.85; }
+
+.btn-open {
+  background: transparent;
+  color: #555;
+  border: 1px solid #333;
+  padding: 8px 18px;
+  font-size: 0.82rem;
+  font-family: inherit;
+  text-decoration: none;
+  transition: color 0.15s, border-color 0.15s;
+  display: inline-block;
+}
+.btn-open:hover { color: #ccc; border-color: #555; }
+
+header h1 a { color: inherit; text-decoration: none; }
