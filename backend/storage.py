@@ -2,6 +2,7 @@ import hashlib
 import json
 import logging
 import mimetypes
+import re
 import subprocess
 import threading
 import time
@@ -23,6 +24,22 @@ MAX_FILE_SIZE = 50 * 1024 * 1024
 THUMB_SIZE = (600, 600)
 
 _lock = threading.Lock()
+
+# Filenames must be lowercase alphanumeric with underscores and a single dot extension.
+# This is enforced at upload time (save_upload) and re-checked at every
+# filesystem operation so path traversal is impossible even with a corrupt DB.
+_SAFE_FILENAME_RE = re.compile(r"^[a-z0-9][a-z0-9_]*\.[a-z0-9]+$")
+
+
+def assert_safe_filename(filename: str) -> None:
+    """Raise ValueError if filename could cause path traversal or filesystem issues."""
+    if not _SAFE_FILENAME_RE.match(filename):
+        raise ValueError(f"Unsafe filename: {filename!r}")
+    # Resolved path must stay inside UPLOADS_DIR (catches any symlink tricks too).
+    try:
+        (UPLOADS_DIR / filename).resolve().relative_to(UPLOADS_DIR.resolve())
+    except ValueError:
+        raise ValueError(f"Filename escapes upload directory: {filename!r}")
 
 
 def _thumb_path(filename: str) -> Path:
@@ -50,7 +67,10 @@ def validate_mime(content_type: str | None, filename: str) -> str:
 
 def save_upload(file_bytes: bytes, original_name: str, mime: str) -> tuple[str, str]:
     UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-    ext = Path(original_name).suffix.lower() or _mime_ext(mime)
+    raw_ext = Path(original_name).suffix.lower()
+    # Strip to [a-z0-9] only so the generated filename always satisfies _SAFE_FILENAME_RE.
+    clean_ext = re.sub(r"[^a-z0-9]", "", raw_ext.lstrip("."))
+    ext = f".{clean_ext}" if clean_ext else _mime_ext(mime)
     sha_prefix = hashlib.sha256(file_bytes).hexdigest()[:12]
     filename = f"{sha_prefix}_{uuid.uuid4().hex[:8]}{ext}"
     (UPLOADS_DIR / filename).write_bytes(file_bytes)
@@ -58,6 +78,7 @@ def save_upload(file_bytes: bytes, original_name: str, mime: str) -> tuple[str, 
 
 
 def generate_thumbnail(filename: str, mime: str) -> bool:
+    assert_safe_filename(filename)
     src = UPLOADS_DIR / filename
     thumb = _thumb_path(filename)
 
@@ -125,6 +146,7 @@ def backfill_thumbnails() -> None:
 
 
 def delete_meme(filename: str) -> bool:
+    assert_safe_filename(filename)
     with _lock:
         memes = _load_memes()
         new_memes = [m for m in memes if m["filename"] != filename]

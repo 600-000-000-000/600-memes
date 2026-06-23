@@ -31,9 +31,9 @@ export default function App() {
     return pk ? memes().filter((m) => m.uploader_pubkey === pk) : memes()
   })
 
-  function readHash() {
-    const h = location.hash.slice(1)
-    setSelectedFilename(h || null)
+  function readPath() {
+    const match = location.pathname.match(/^\/m\/(.+)$/)
+    setSelectedFilename(match ? decodeURIComponent(match[1]) : null)
   }
 
   const fetchMemes = async () => {
@@ -48,18 +48,19 @@ export default function App() {
 
   onMount(() => {
     fetchMemes()
-    readHash()
-    window.addEventListener('hashchange', readHash)
+    readPath()
+    window.addEventListener('popstate', readPath)
   })
 
-  onCleanup(() => window.removeEventListener('hashchange', readHash))
+  onCleanup(() => window.removeEventListener('popstate', readPath))
 
   function openMeme(m: MemeItem) {
-    location.hash = m.filename
+    history.pushState(null, '', `/m/${m.filename}`)
+    setSelectedFilename(m.filename)
   }
 
   function closeMeme() {
-    history.pushState(null, '', location.pathname)
+    history.pushState(null, '', '/')
     setSelectedFilename(null)
   }
 

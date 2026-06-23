@@ -81,24 +81,23 @@ async def meme_og_page(filename: str, request: Request):
     og_url = f"{base}/m/{filename}"
     uploader = html_lib.escape(meme.get("uploader_name") or meme["uploader_pubkey"][:8])
     title = html_lib.escape(f"meme by @{uploader} — 600 000 000 000 memes")
-    spa_url = f"/#{ filename}"
 
-    return HTMLResponse(f"""<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>{title}</title>
-  <meta property="og:title" content="{title}" />
-  <meta property="og:image" content="{og_image}" />
-  <meta property="og:url" content="{og_url}" />
-  <meta property="og:type" content="website" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="{title}" />
-  <meta name="twitter:image" content="{og_image}" />
-  <script>location.replace({repr(spa_url)})</script>
-</head>
-<body></body>
-</html>""")
+    og_tags = (
+        f'  <meta property="og:title" content="{title}" />\n'
+        f'  <meta property="og:image" content="{og_image}" />\n'
+        f'  <meta property="og:url" content="{og_url}" />\n'
+        f'  <meta property="og:type" content="website" />\n'
+        f'  <meta name="twitter:card" content="summary_large_image" />\n'
+        f'  <meta name="twitter:image" content="{og_image}" />\n'
+    )
+
+    index_path = STATIC_DIR / "index.html"
+    if index_path.exists():
+        page = index_path.read_text().replace("</head>", og_tags + "</head>", 1)
+    else:
+        page = f"<!DOCTYPE html><html><head>{og_tags}</head><body></body></html>"
+
+    return HTMLResponse(page)
 
 
 @app.delete("/api/memes/{filename}")
