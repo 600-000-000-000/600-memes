@@ -33,12 +33,7 @@ def _verify_schnorr(pubkey_hex: str, sig_hex: str, msg_hex: str) -> bool:
         return False
 
 
-def validate_nip98_auth(
-    authorization: str,
-    expected_url: str,
-    file_bytes: bytes,
-    members: set[str],
-) -> str:
+def _parse_and_verify_nip98(authorization: str) -> dict[str, Any]:
     if not authorization.startswith("Nostr "):
         raise HTTPException(status_code=401, detail="Missing Nostr auth header")
 
@@ -64,6 +59,16 @@ def validate_nip98_auth(
     if not _verify_schnorr(event["pubkey"], event["sig"], event["id"]):
         raise HTTPException(status_code=401, detail="Invalid Nostr signature")
 
+    return event
+
+
+def validate_nip98_auth(
+    authorization: str,
+    expected_url: str,
+    file_bytes: bytes,
+    members: set[str],
+) -> str:
+    event = _parse_and_verify_nip98(authorization)
     tags = {t[0]: t[1] for t in event["tags"] if len(t) >= 2}
 
     if tags.get("u") != expected_url:
@@ -75,6 +80,27 @@ def validate_nip98_auth(
     file_sha256 = hashlib.sha256(file_bytes).hexdigest()
     if tags.get("payload") != file_sha256:
         raise HTTPException(status_code=401, detail="Payload SHA256 mismatch")
+
+    pubkey = event["pubkey"].lower()
+    if pubkey not in members:
+        raise HTTPException(status_code=403, detail="Not a 600.wtf member")
+
+    return pubkey
+
+
+def validate_nip98_delete_auth(
+    authorization: str,
+    expected_url: str,
+    members: set[str],
+) -> str:
+    event = _parse_and_verify_nip98(authorization)
+    tags = {t[0]: t[1] for t in event["tags"] if len(t) >= 2}
+
+    if tags.get("u") != expected_url:
+        raise HTTPException(status_code=401, detail="URL mismatch in auth event")
+
+    if tags.get("method", "").upper() != "DELETE":
+        raise HTTPException(status_code=401, detail="Method mismatch in auth event")
 
     pubkey = event["pubkey"].lower()
     if pubkey not in members:

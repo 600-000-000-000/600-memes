@@ -18,11 +18,15 @@ MAX_FILE_SIZE = 50 * 1024 * 1024
 _lock = threading.Lock()
 
 
-def get_memes() -> list[dict]:
+def _load_memes() -> list[dict]:
     if not MEMES_FILE.exists():
         return []
     with open(MEMES_FILE) as f:
         return json.load(f)
+
+
+def get_memes() -> list[dict]:
+    return sorted(_load_memes(), key=lambda m: m.get("uploaded_at", ""), reverse=True)
 
 
 def validate_mime(content_type: str | None, filename: str) -> str:
@@ -47,7 +51,7 @@ def append_meme(
     name: str | None = None, avatar: str | None = None,
 ) -> None:
     with _lock:
-        memes = get_memes()
+        memes = _load_memes()
         entry: dict = {
             "filename": filename,
             "url": url,
@@ -61,6 +65,19 @@ def append_meme(
             entry["uploader_avatar"] = avatar
         memes.append(entry)
         MEMES_FILE.write_text(json.dumps(memes, indent=2))
+
+
+def delete_meme(filename: str) -> bool:
+    with _lock:
+        memes = _load_memes()
+        new_memes = [m for m in memes if m["filename"] != filename]
+        if len(new_memes) == len(memes):
+            return False
+        MEMES_FILE.write_text(json.dumps(new_memes, indent=2))
+        file_path = UPLOADS_DIR / filename
+        if file_path.exists():
+            file_path.unlink()
+        return True
 
 
 def _mime_ext(mime: str) -> str:

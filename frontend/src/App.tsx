@@ -50,7 +50,7 @@ export default function App() {
       <header>
         <h1>
           <a href="/" onClick={(e) => { e.preventDefault(); closeMeme() }}>
-            memes.600.wtf
+            600 000 000 000 memes
           </a>
         </h1>
         <button class="btn-upload" onClick={() => setShowUpload(true)}>
@@ -69,7 +69,7 @@ export default function App() {
           <div class="empty">no memes yet. be the first.</div>
         </Show>
       }>
-        {(meme) => <MemeDetail meme={meme()} onBack={closeMeme} />}
+        {(meme) => <MemeDetail meme={meme()} onBack={closeMeme} onDelete={() => { closeMeme(); fetchMemes() }} />}
       </Show>
 
       <Show when={showUpload()}>
