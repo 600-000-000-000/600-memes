@@ -27,7 +27,7 @@ export default function MemeDetail(props: Props) {
   }
 
   function shareUrl() {
-    return `${location.origin}/#${props.meme.filename}`
+    return `${location.origin}/m/${props.meme.filename}`
   }
 
   async function copyLink() {

@@ -1,10 +1,11 @@
 import asyncio
+import html as html_lib
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from auth import validate_nip98_auth, validate_nip98_delete_auth
@@ -65,6 +66,39 @@ async def upload_meme(
 
     logger.info("Upload: %s by %s (%s)", filename, name or "unknown", pubkey[:8])
     return {"filename": filename, "url": url, "uploader_pubkey": pubkey, "uploader_name": name}
+
+
+@app.get("/m/{filename}")
+async def meme_og_page(filename: str, request: Request):
+    all_memes = get_memes()
+    meme = next((m for m in all_memes if m["filename"] == filename), None)
+    if not meme:
+        raise HTTPException(status_code=404, detail="Meme not found")
+
+    base = str(request.base_url).rstrip("/")
+    stem = Path(filename).stem
+    og_image = f"{base}/uploads/{stem}_thumb.jpg"
+    og_url = f"{base}/m/{filename}"
+    uploader = html_lib.escape(meme.get("uploader_name") or meme["uploader_pubkey"][:8])
+    title = html_lib.escape(f"meme by @{uploader} — 600 000 000 000 memes")
+    spa_url = f"/#{ filename}"
+
+    return HTMLResponse(f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>{title}</title>
+  <meta property="og:title" content="{title}" />
+  <meta property="og:image" content="{og_image}" />
+  <meta property="og:url" content="{og_url}" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="{title}" />
+  <meta name="twitter:image" content="{og_image}" />
+  <script>location.replace({repr(spa_url)})</script>
+</head>
+<body></body>
+</html>""")
 
 
 @app.delete("/api/memes/{filename}")
