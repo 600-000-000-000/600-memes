@@ -6,8 +6,10 @@ interface Props {
   onSelect: (m: MemeItem) => void
 }
 
-function thumbUrl(filename: string) {
-  return `/uploads/${filename.replace(/\.[^.]+$/, '')}_thumb.jpg`
+function thumbUrl(filename: string, mimeType: string) {
+  const stem = filename.replace(/\.[^.]+$/, '')
+  const ext = mimeType === 'image/gif' ? 'gif' : 'jpg'
+  return `/uploads/${stem}_thumb.${ext}`
 }
 
 export default function MemeGrid(props: Props) {
@@ -17,7 +19,7 @@ export default function MemeGrid(props: Props) {
         {(meme) => (
           <div class="meme-card" onClick={() => props.onSelect(meme)}>
             <div class="meme-thumb">
-              <img src={thumbUrl(meme.filename)} alt={meme.filename} loading="lazy" />
+              <img src={thumbUrl(meme.filename, meme.mime_type)} alt={meme.filename} loading="lazy" />
               <Show when={meme.mime_type.startsWith('video/')}>
                 <div class="play-badge">▶</div>
               </Show>

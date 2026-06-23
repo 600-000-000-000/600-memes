@@ -42,8 +42,9 @@ def assert_safe_filename(filename: str) -> None:
         raise ValueError(f"Filename escapes upload directory: {filename!r}")
 
 
-def _thumb_path(filename: str) -> Path:
-    return UPLOADS_DIR / f"{Path(filename).stem}_thumb.jpg"
+def _thumb_path(filename: str, mime: str = "") -> Path:
+    ext = "gif" if mime == "image/gif" else "jpg"
+    return UPLOADS_DIR / f"{Path(filename).stem}_thumb.{ext}"
 
 
 def _load_memes() -> list[dict]:
@@ -80,13 +81,33 @@ def save_upload(file_bytes: bytes, original_name: str, mime: str) -> tuple[str, 
 def generate_thumbnail(filename: str, mime: str) -> bool:
     assert_safe_filename(filename)
     src = UPLOADS_DIR / filename
-    thumb = _thumb_path(filename)
+    thumb = _thumb_path(filename, mime)
 
     try:
+        if mime == "image/gif":
+            with Image.open(src) as img:
+                frames, durations = [], []
+                try:
+                    while True:
+                        frame = img.copy().convert("RGBA")
+                        frame.thumbnail(THUMB_SIZE, Image.LANCZOS)
+                        frames.append(frame)
+                        durations.append(img.info.get("duration", 100))
+                        img.seek(img.tell() + 1)
+                except EOFError:
+                    pass
+            if frames:
+                frames[0].save(
+                    thumb, format="GIF", save_all=True,
+                    append_images=frames[1:], loop=0,
+                    duration=durations, optimize=False,
+                )
+            return bool(frames)
+
         if mime.startswith("image/"):
             with Image.open(src) as img:
                 img = img.convert("RGB")
-                img.thumbnail(THUMB_SIZE)
+                img.thumbnail(THUMB_SIZE, Image.LANCZOS)
                 img.save(thumb, "JPEG", quality=85, optimize=True)
             return True
 
@@ -134,7 +155,7 @@ def append_meme(
 
 def backfill_thumbnails() -> None:
     memes = _load_memes()
-    to_fill = [m for m in memes if not _thumb_path(m["filename"]).exists()]
+    to_fill = [m for m in memes if not _thumb_path(m["filename"], m.get("mime_type", "")).exists()]
     if not to_fill:
         logger.info("Thumbnail check: all %d memes have thumbnails", len(memes))
         return
@@ -153,7 +174,12 @@ def delete_meme(filename: str) -> bool:
         if len(new_memes) == len(memes):
             return False
         MEMES_FILE.write_text(json.dumps(new_memes, indent=2))
-        for path in [UPLOADS_DIR / filename, _thumb_path(filename)]:
+        stem = Path(filename).stem
+        for path in [
+            UPLOADS_DIR / filename,
+            UPLOADS_DIR / f"{stem}_thumb.jpg",
+            UPLOADS_DIR / f"{stem}_thumb.gif",
+        ]:
             if path.exists():
                 path.unlink()
         return True
