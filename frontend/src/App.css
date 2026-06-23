@@ -99,11 +99,28 @@ header h1 {
   border: 1px solid #1a1a1a;
 }
 
-.meme-card > img,
-.meme-card > video {
+.meme-thumb {
+  position: relative;
+  display: block;
+}
+
+.meme-thumb > img,
+.meme-thumb > video {
   display: block;
   width: 100%;
   height: auto;
+}
+
+.play-badge {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 6px rgba(0,0,0,0.7);
+  pointer-events: none;
 }
 
 .meme-meta {

@@ -1,4 +1,6 @@
+import asyncio
 import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, File, Header, HTTPException, Request, UploadFile
@@ -7,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from auth import validate_nip98_auth, validate_nip98_delete_auth
 from members import load_members
-from storage import MAX_FILE_SIZE, append_meme, delete_meme, get_memes, save_upload, validate_mime
+from storage import MAX_FILE_SIZE, append_meme, backfill_thumbnails, delete_meme, generate_thumbnail, get_memes, save_upload, validate_mime
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -19,7 +21,14 @@ members, pubkey_to_name, pubkey_to_avatar = load_members()
 
 _DNI_PUBKEY = next((pk for pk, name in pubkey_to_name.items() if name == "dni"), None)
 
-app = FastAPI(title="memes.600.wtf")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await asyncio.get_event_loop().run_in_executor(None, backfill_thumbnails)
+    yield
+
+
+app = FastAPI(title="memes.600.wtf", lifespan=lifespan)
 
 
 @app.get("/api/memes")
@@ -51,6 +60,7 @@ async def upload_meme(
     avatar = pubkey_to_avatar.get(pubkey)
 
     filename, url = save_upload(file_bytes, file.filename or "upload", mime)
+    generate_thumbnail(filename, mime)
     append_meme(filename, url, pubkey, mime, name, avatar)
 
     logger.info("Upload: %s by %s (%s)", filename, name or "unknown", pubkey[:8])

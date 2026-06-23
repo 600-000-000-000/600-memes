@@ -1,10 +1,16 @@
 import hashlib
 import json
+import logging
 import mimetypes
+import subprocess
 import threading
 import time
 import uuid
 from pathlib import Path
+
+from PIL import Image
+
+logger = logging.getLogger(__name__)
 
 UPLOADS_DIR = Path("/app/uploads")
 MEMES_FILE = UPLOADS_DIR / "memes.json"
@@ -14,8 +20,13 @@ ALLOWED_MIME = {
     "video/mp4", "video/webm", "video/ogg", "video/quicktime", "video/x-matroska",
 }
 MAX_FILE_SIZE = 50 * 1024 * 1024
+THUMB_SIZE = (600, 600)
 
 _lock = threading.Lock()
+
+
+def _thumb_path(filename: str) -> Path:
+    return UPLOADS_DIR / f"{Path(filename).stem}_thumb.jpg"
 
 
 def _load_memes() -> list[dict]:
@@ -46,6 +57,39 @@ def save_upload(file_bytes: bytes, original_name: str, mime: str) -> tuple[str, 
     return filename, f"/uploads/{filename}"
 
 
+def generate_thumbnail(filename: str, mime: str) -> bool:
+    src = UPLOADS_DIR / filename
+    thumb = _thumb_path(filename)
+
+    try:
+        if mime.startswith("image/"):
+            with Image.open(src) as img:
+                img = img.convert("RGB")
+                img.thumbnail(THUMB_SIZE)
+                img.save(thumb, "JPEG", quality=85, optimize=True)
+            return True
+
+        if mime.startswith("video/"):
+            result = subprocess.run(
+                [
+                    "ffmpeg", "-y", "-i", str(src),
+                    "-ss", "0", "-vframes", "1",
+                    "-vf", f"scale={THUMB_SIZE[0]}:-2",
+                    str(thumb),
+                ],
+                capture_output=True,
+                timeout=30,
+            )
+            if result.returncode == 0 and thumb.exists():
+                return True
+            logger.warning("ffmpeg thumbnail failed for %s: %s", filename, result.stderr[-200:])
+
+    except Exception as e:
+        logger.warning("Thumbnail generation failed for %s: %s", filename, e)
+
+    return False
+
+
 def append_meme(
     filename: str, url: str, pubkey: str, mime: str,
     name: str | None = None, avatar: str | None = None,
@@ -67,6 +111,19 @@ def append_meme(
         MEMES_FILE.write_text(json.dumps(memes, indent=2))
 
 
+def backfill_thumbnails() -> None:
+    memes = _load_memes()
+    to_fill = [m for m in memes if not _thumb_path(m["filename"]).exists()]
+    if not to_fill:
+        logger.info("Thumbnail check: all %d memes have thumbnails", len(memes))
+        return
+
+    logger.info("Thumbnail check: generating thumbnails for %d/%d memes…", len(to_fill), len(memes))
+    ok = sum(generate_thumbnail(m["filename"], m["mime_type"]) for m in to_fill)
+    failed = len(to_fill) - ok
+    logger.info("Thumbnail check: done — %d generated, %d failed", ok, failed)
+
+
 def delete_meme(filename: str) -> bool:
     with _lock:
         memes = _load_memes()
@@ -74,9 +131,9 @@ def delete_meme(filename: str) -> bool:
         if len(new_memes) == len(memes):
             return False
         MEMES_FILE.write_text(json.dumps(new_memes, indent=2))
-        file_path = UPLOADS_DIR / filename
-        if file_path.exists():
-            file_path.unlink()
+        for path in [UPLOADS_DIR / filename, _thumb_path(filename)]:
+            if path.exists():
+                path.unlink()
         return True
 
 
