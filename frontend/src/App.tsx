@@ -1,4 +1,4 @@
-import { createSignal, onMount, onCleanup, Show } from 'solid-js'
+import { createSignal, createMemo, onMount, onCleanup, Show, For } from 'solid-js'
 import type { MemeItem } from './types'
 import MemeGrid from './components/MemeGrid'
 import MemeDetail from './components/MemeDetail'
@@ -9,9 +9,27 @@ export default function App() {
   const [showUpload, setShowUpload] = createSignal(false)
   const [error, setError] = createSignal<string | null>(null)
   const [selectedFilename, setSelectedFilename] = createSignal<string | null>(null)
+  const [filterPubkey, setFilterPubkey] = createSignal<string | null>(null)
 
   const selectedMeme = () =>
     memes().find((m) => m.filename === selectedFilename()) ?? null
+
+  const uploaders = createMemo(() => {
+    const seen = new Set<string>()
+    const list: { pubkey: string; name?: string; avatar?: string }[] = []
+    for (const m of memes()) {
+      if (!seen.has(m.uploader_pubkey)) {
+        seen.add(m.uploader_pubkey)
+        list.push({ pubkey: m.uploader_pubkey, name: m.uploader_name, avatar: m.uploader_avatar })
+      }
+    }
+    return list
+  })
+
+  const visibleMemes = createMemo(() => {
+    const pk = filterPubkey()
+    return pk ? memes().filter((m) => m.uploader_pubkey === pk) : memes()
+  })
 
   function readHash() {
     const h = location.hash.slice(1)
@@ -63,11 +81,38 @@ export default function App() {
       </Show>
 
       <Show when={selectedMeme()} fallback={
-        <Show when={memes().length === 0} fallback={
-          <MemeGrid memes={memes()} onSelect={openMeme} />
-        }>
-          <div class="empty">no memes yet. be the first.</div>
-        </Show>
+        <>
+          <Show when={uploaders().length > 1}>
+            <div class="filter-bar">
+              <button
+                class={`filter-chip${filterPubkey() === null ? ' active' : ''}`}
+                onClick={() => setFilterPubkey(null)}
+              >
+                all
+              </button>
+              <For each={uploaders()}>
+                {(u) => (
+                  <button
+                    class={`filter-chip${filterPubkey() === u.pubkey ? ' active' : ''}`}
+                    onClick={() => setFilterPubkey(filterPubkey() === u.pubkey ? null : u.pubkey)}
+                  >
+                    <Show when={u.avatar}>
+                      <img class="avatar-xs" src={u.avatar} alt="" />
+                    </Show>
+                    {u.name ? `@${u.name}` : u.pubkey.slice(0, 8) + '…'}
+                  </button>
+                )}
+              </For>
+            </div>
+          </Show>
+          <Show when={visibleMemes().length === 0} fallback={
+            <MemeGrid memes={visibleMemes()} onSelect={openMeme} />
+          }>
+            <div class="empty">
+              {memes().length === 0 ? 'no memes yet. be the first.' : 'no memes from this member.'}
+            </div>
+          </Show>
+        </>
       }>
         {(meme) => <MemeDetail meme={meme()} onBack={closeMeme} onDelete={() => { closeMeme(); fetchMemes() }} />}
       </Show>

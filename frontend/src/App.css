@@ -60,6 +60,31 @@ header h1 {
   font-size: 0.95rem;
 }
 
+/* Filter bar */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.filter-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  color: #555;
+  border: 1px solid #222;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.filter-chip:hover { color: #ccc; border-color: #444; }
+.filter-chip.active { color: #f5a623; border-color: #f5a623; }
+
 /* Meme grid */
 .meme-grid {
   columns: 4 280px;
